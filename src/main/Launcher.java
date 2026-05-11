@@ -8,7 +8,7 @@ public class Launcher {
     public static void main(String[] args) {
         System.setProperty("prism.order", "sw");
         System.setProperty("prism.verbose", "true");
-        // Esta línea es opcional pero ayuda si el error persiste:
+           //linea opcional pero implementada debido a que se presentaba un error
         System.setProperty("java.library.path", "C:/javafx-sdk-25.0.3/bin");
         
         MainApp.main(args);
