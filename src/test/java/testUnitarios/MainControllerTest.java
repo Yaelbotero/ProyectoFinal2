@@ -32,7 +32,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 
  //Test Unitario — MainController
-
+    //Test final de la logíca entera del programa
 
 @ExtendWith(ApplicationExtension.class)
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
