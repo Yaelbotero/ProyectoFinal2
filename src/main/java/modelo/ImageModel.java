@@ -9,15 +9,13 @@ package modelo;
  * @author cript
  */
 
-
 import javafx.scene.image.Image;
 import javafx.scene.image.PixelReader;
 import javafx.scene.image.PixelWriter;
 import javafx.scene.image.WritableImage;
 import javafx.scene.paint.Color;
 
-
-public class ImageModel {
+public class ImageModel implements ImageFilter {
 
     private Image originalImage;
     private Image processedImage;
@@ -55,19 +53,30 @@ public class ImageModel {
         {-0.86744736, 1.86727022,  0.00000000 }
     };
 
+
     public Image getOriginalImage() { return originalImage; }
+
+
     public Image getProcessedImage() { return processedImage; }
+
+
     public ColorBlindType getCurrentType() { return currentType; }
 
+
+    @Override
     public void setOriginalImage(Image image) {
-        this.originalImage = image;
+        this.originalImage  = image;
         this.processedImage = null;
     }
 
+
+    @Override
     public boolean hasImage() {
         return originalImage != null;
     }
 
+
+    @Override
     public Image applyColorBlindFilter(ColorBlindType type) {
         if (originalImage == null) return null;
 
@@ -77,14 +86,14 @@ public class ImageModel {
         int width  = (int) originalImage.getWidth();
         int height = (int) originalImage.getHeight();
 
-        WritableImage result   = new WritableImage(width, height);
-        PixelReader   reader   = originalImage.getPixelReader();
-        PixelWriter   writer   = result.getPixelWriter();
+        WritableImage result = new WritableImage(width, height);
+        PixelReader   reader = originalImage.getPixelReader();
+        PixelWriter   writer = result.getPixelWriter();
 
         for (int y = 0; y < height; y++) {
             for (int x = 0; x < width; x++) {
-                Color original     = reader.getColor(x, y);
-                Color transformed  = transformColor(original, simulationMatrix);
+                Color original    = reader.getColor(x, y);
+                Color transformed = transformColor(original, simulationMatrix);
                 writer.setColor(x, y, transformed);
             }
         }
@@ -93,27 +102,30 @@ public class ImageModel {
         return result;
     }
 
+  
+     //Aplica el filtro usando el nombre del tipo de daltonismo como cadena de texto.
+
+    public Image applyColorBlindFilter(String typeName) {
+        return applyColorBlindFilter(ColorBlindType.valueOf(typeName.toUpperCase()));
+    }
+    
+
+    // Métodos privados de transformación de color
+
+    
     private Color transformColor(Color color, double[][] simMatrix) {
-        double r = color.getRed();
-        double g = color.getGreen();
-        double b = color.getBlue();
+        double r = linearize(color.getRed());
+        double g = linearize(color.getGreen());
+        double b = linearize(color.getBlue());
 
-        r = linearize(r);
-        g = linearize(g);
-        b = linearize(b);
-
-        double[] lms = multiplyMatrix(RGB_TO_LMS, new double[]{ r, g, b });
+        double[] lms          = multiplyMatrix(RGB_TO_LMS, new double[]{ r, g, b });
         double[] lmsSimulated = multiplyMatrix(simMatrix, lms);
-        double[] rgbLinear = multiplyMatrix(LMS_TO_RGB, lmsSimulated);
-
-        double rOut = gammaCorrect(rgbLinear[0]);
-        double gOut = gammaCorrect(rgbLinear[1]);
-        double bOut = gammaCorrect(rgbLinear[2]);
+        double[] rgbLinear    = multiplyMatrix(LMS_TO_RGB, lmsSimulated);
 
         return new Color(
-            clamp(rOut),
-            clamp(gOut),
-            clamp(bOut),
+            clamp(gammaCorrect(rgbLinear[0])),
+            clamp(gammaCorrect(rgbLinear[1])),
+            clamp(gammaCorrect(rgbLinear[2])),
             color.getOpacity()
         );
     }
@@ -128,26 +140,31 @@ public class ImageModel {
         return result;
     }
 
+
+     //Convierte un valor sRGB comprimido a valor lineal (elimina gamma).
+
     private double linearize(double value) {
-        if (value <= 0.04045) {
-            return value / 12.92;
-        } else {
-            return Math.pow((value + 0.055) / 1.055, 2.4);
-        }
+        return (value <= 0.04045)
+            ? value / 12.92
+            : Math.pow((value + 0.055) / 1.055, 2.4);
     }
+
+
+    //Aplica corrección gamma para convertir un valor lineal a sRGB.
 
     private double gammaCorrect(double value) {
         value = clamp(value);
-        if (value <= 0.0031308) {
-            return value * 12.92;
-        } else {
-            return 1.055 * Math.pow(value, 1.0 / 2.4) - 0.055;
-        }
+        return (value <= 0.0031308)
+            ? value * 12.92
+            : 1.055 * Math.pow(value, 1.0 / 2.4) - 0.055;
     }
 
     private double clamp(double value) {
         return Math.max(0.0, Math.min(1.0, value));
     }
+
+
+    // Devuelve la matriz de simulación LMS correspondiente al tipo de daltonismo.
 
     private double[][] getSimulationMatrix(ColorBlindType type) {
         switch (type) {
