@@ -9,8 +9,8 @@ package controlador;
  * @author cript
  */
 
-
 import modelo.ColorBlindType;
+import modelo.ImageFilter;
 import modelo.ImageModel;
 import vista.MainView;
 import javafx.concurrent.Task;
@@ -20,18 +20,23 @@ import javafx.stage.Stage;
 
 import java.io.File;
 
-/**
- * CONTROLADOR — MainController
- * 
- * Actúa como intermediario entre el Modelo y la Vista.
- */
+
+ //CONTROLADOR — MainController
+
+
 public class MainController {
 
-    private final ImageModel model;
-    private final MainView view;
-    private final Stage stage;
+// Referencia al modelo a través de su interfaz
+    
+    private final ImageFilter model;
+    private final MainView    view;
+    private final Stage       stage;
 
-    public MainController(ImageModel model, MainView view, Stage stage) {
+  
+    
+    //Construye el controlador y enlaza los eventos de la vista.
+    
+    public MainController(ImageFilter model, MainView view, Stage stage) {
         this.model = model;
         this.view  = view;
         this.stage = stage;
@@ -39,11 +44,16 @@ public class MainController {
         bindEvents();
     }
 
+
+    //Enlaza cada acción de la vista con su manejador correspondiente.
     private void bindEvents() {
         view.setOnLoadImage(e -> handleLoadImage());
         view.setOnApplyFilter(type -> handleApplyFilter(type));
         view.setOnReset(e -> handleReset());
     }
+
+
+    //Abre un diálogo para seleccionar un archivo de imagen, lo carga en el modelo y actualiza la vista.
 
     private void handleLoadImage() {
         FileChooser fileChooser = new FileChooser();
@@ -72,13 +82,15 @@ public class MainController {
                 view.setResetEnabled(false);
                 view.clearProcessedImage();
                 view.showStatus("Imagen cargada: " + selectedFile.getName()
-                    + "  (" + (int)image.getWidth() + " × " + (int)image.getHeight() + " px)");
+                    + "  (" + (int) image.getWidth() + " × " + (int) image.getHeight() + " px)");
 
             } catch (Exception ex) {
                 view.showError("Error al leer el archivo:\n" + ex.getMessage());
             }
         }
     }
+
+     //Aplica el filtro de daltonismo seleccionado en un hilo secundario para no bloquear el hilo de la interfaz gráfica.
 
     private void handleApplyFilter(ColorBlindType type) {
         if (!model.hasImage()) {
@@ -116,6 +128,9 @@ public class MainController {
         thread.start();
     }
 
+
+    //Limpia la imagen procesada de la vista y restablece el estado de los botones.
+    
     private void handleReset() {
         view.clearProcessedImage();
         view.setResetEnabled(false);
