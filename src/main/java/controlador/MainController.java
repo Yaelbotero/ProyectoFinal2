@@ -11,31 +11,30 @@ package controlador;
 
 import modelo.ColorBlindType;
 import modelo.ImageFilter;
-import modelo.ImageModel;
 import vista.MainView;
 import javafx.concurrent.Task;
+import javafx.embed.swing.SwingFXUtils;
 import javafx.scene.image.Image;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
 import java.io.File;
+import java.io.IOException;
 
 
- //CONTROLADOR — MainController
-
+// CONTROLADOR — MainController
 
 public class MainController {
 
-// Referencia al modelo a través de su interfaz
-    
+ 
     private final ImageFilter model;
     private final MainView    view;
     private final Stage       stage;
 
-  
-    
-    //Construye el controlador y enlaza los eventos de la vista.
-    
+
+    // Construye el controlador y enlaza los eventos de la vista.
     public MainController(ImageFilter model, MainView view, Stage stage) {
         this.model = model;
         this.view  = view;
@@ -45,15 +44,13 @@ public class MainController {
     }
 
 
-    //Enlaza cada acción de la vista con su manejador correspondiente.
     private void bindEvents() {
-        view.setOnLoadImage(e -> handleLoadImage());
+        view.setOnLoadImage(e      -> handleLoadImage());
         view.setOnApplyFilter(type -> handleApplyFilter(type));
-        view.setOnReset(e -> handleReset());
+        view.setOnSaveImage(e      -> handleSaveImage());
+        view.setOnReset(e          -> handleReset());
     }
 
-
-    //Abre un diálogo para seleccionar un archivo de imagen, lo carga en el modelo y actualiza la vista.
 
     private void handleLoadImage() {
         FileChooser fileChooser = new FileChooser();
@@ -80,6 +77,7 @@ public class MainController {
                 view.displayOriginalImage(image);
                 view.setFilterButtonsEnabled(true);
                 view.setResetEnabled(false);
+                view.setSaveEnabled(false);
                 view.clearProcessedImage();
                 view.showStatus("Imagen cargada: " + selectedFile.getName()
                     + "  (" + (int) image.getWidth() + " × " + (int) image.getHeight() + " px)");
@@ -89,8 +87,6 @@ public class MainController {
             }
         }
     }
-
-     //Aplica el filtro de daltonismo seleccionado en un hilo secundario para no bloquear el hilo de la interfaz gráfica.
 
     private void handleApplyFilter(ColorBlindType type) {
         if (!model.hasImage()) {
@@ -113,6 +109,7 @@ public class MainController {
             view.displayProcessedImage(result);
             view.setProcessing(false);
             view.setResetEnabled(true);
+            view.setSaveEnabled(true);
             view.showStatus("Simulación aplicada: " + type.getDisplayName()
                 + " — Así ve esta imagen una persona con este tipo de daltonismo.");
         });
@@ -129,11 +126,63 @@ public class MainController {
     }
 
 
+    private void handleSaveImage() {
+        Image processedImage = model.getProcessedImage();
+
+        if (processedImage == null) {
+            view.showError("No hay imagen procesada para guardar.\nAplica un filtro primero.");
+            return;
+        }
+
+        FileChooser fileChooser = new FileChooser();
+        fileChooser.setTitle("Guardar Imagen Procesada");
+        fileChooser.setInitialFileName("simulacion_" + model.getCurrentType().name().toLowerCase() + ".png");
+        fileChooser.getExtensionFilters().addAll(
+            new FileChooser.ExtensionFilter("PNG (sin pérdida)", "*.png"),
+            new FileChooser.ExtensionFilter("JPEG",              "*.jpg"),
+            new FileChooser.ExtensionFilter("BMP",               "*.bmp")
+        );
+
+        File destFile = fileChooser.showSaveDialog(stage);
+
+        if (destFile != null) {
+            try {
+                String extension = getExtension(destFile.getName());
+                String format    = extension.equalsIgnoreCase("jpg") ? "jpeg" : extension;
+
+                BufferedImage buffered = SwingFXUtils.fromFXImage(processedImage, null);
+
+                if (format.equalsIgnoreCase("jpeg")) {
+                    BufferedImage rgbImage = new BufferedImage(
+                        buffered.getWidth(), buffered.getHeight(), BufferedImage.TYPE_INT_RGB
+                    );
+                    rgbImage.createGraphics().drawImage(buffered, 0, 0, java.awt.Color.WHITE, null);
+                    buffered = rgbImage;
+                }
+
+                ImageIO.write(buffered, format, destFile);
+
+                view.showStatus("Imagen guardada: " + destFile.getName());
+                view.showSuccess("La imagen se guardó correctamente en:\n" + destFile.getAbsolutePath());
+
+            } catch (IOException ex) {
+                view.showError("No se pudo guardar la imagen:\n" + ex.getMessage());
+            }
+        }
+    }
+
+
     //Limpia la imagen procesada de la vista y restablece el estado de los botones.
-    
     private void handleReset() {
         view.clearProcessedImage();
         view.setResetEnabled(false);
+        view.setSaveEnabled(false);
         view.showStatus("Vista restablecida. Selecciona un tipo de daltonismo para simular.");
+    }
+
+
+    private String getExtension(String filename) {
+        int dot = filename.lastIndexOf('.');
+        return (dot >= 0) ? filename.substring(dot + 1).toLowerCase() : "png";
     }
 }

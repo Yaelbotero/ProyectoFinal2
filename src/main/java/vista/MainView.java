@@ -4,11 +4,6 @@
  */
 package vista;
 
-/**
- *
- * @author cript
- */
-
 import controlador.MainController;
 import modelo.ColorBlindType;
 import modelo.ImageModel;
@@ -26,6 +21,8 @@ import javafx.stage.Stage;
 import java.util.function.Consumer;
 
 
+ //VISTA — MainView
+
 public class MainView {
 
     private final Scene scene;
@@ -35,9 +32,11 @@ public class MainView {
     private final ProgressIndicator progressIndicator;
     private final Button loadButton;
     private final Button resetButton;
+    private final Button saveButton;
     private final Button[] filterButtons;
 
     private javafx.event.EventHandler<javafx.event.ActionEvent> onLoadImage;
+    private javafx.event.EventHandler<javafx.event.ActionEvent> onSaveImage;
     private Consumer<ColorBlindType> onApplyFilter;
     private javafx.event.EventHandler<javafx.event.ActionEvent> onReset;
 
@@ -45,9 +44,13 @@ public class MainView {
     private static final String BG_CARD        = "#1A1D27";
     private static final String BG_CARD2       = "#1E2130";
     private static final String ACCENT_BLUE    = "#4F8EF7";
+    private static final String ACCENT_GREEN   = "#27AE60";
     private static final String TEXT_PRIMARY   = "#E8EAF0";
     private static final String TEXT_SECONDARY = "#8892A4";
     private static final String BORDER_COLOR   = "#2A2D3E";
+
+
+     //Construye la vista principal, inicializa todos los componentes y conecta el controlador.
 
     public MainView(Stage stage) {
         originalImageView  = createImageView();
@@ -66,6 +69,7 @@ public class MainView {
 
         loadButton  = buildLoadButton();
         resetButton = buildResetButton();
+        saveButton  = buildSaveButton();
 
         BorderPane root = buildRoot();
         scene = new Scene(root, 1000, 700);
@@ -75,6 +79,7 @@ public class MainView {
         new MainController(new ImageModel(), this, stage);
     }
 
+    //Construcción del layout
     private BorderPane buildRoot() {
         BorderPane root = new BorderPane();
         root.setStyle("-fx-background-color: " + BG_DARK + ";");
@@ -119,7 +124,7 @@ public class MainView {
 
     private HBox buildImageArea() {
         VBox leftPanel  = buildImagePanel(originalImageView,  "Imagen Original",   loadButton,  true);
-        VBox rightPanel = buildImagePanel(processedImageView, "Imagen con Filtro", resetButton, false);
+        VBox rightPanel = buildImagePanel(processedImageView, "Imagen con Filtro", buildRightButtonRow(), false);
 
         Separator sep = new Separator(javafx.geometry.Orientation.VERTICAL);
         sep.setStyle("-fx-background-color: " + BORDER_COLOR + ";");
@@ -132,7 +137,23 @@ public class MainView {
         return area;
     }
 
+    //Construye la fila de botones del panel derecho (Restablecer + Guardar).
+    private HBox buildRightButtonRow() {
+        HBox row = new HBox(10, resetButton, saveButton);
+        row.setAlignment(Pos.CENTER);
+        return row;
+    }
+
+
+     //Construye un panel de imagen con su etiqueta y botón de acción
     private VBox buildImagePanel(ImageView imgView, String labelText, Button actionButton, boolean isLeft) {
+        return buildImagePanel(imgView, labelText, wrapInHBox(actionButton), isLeft);
+    }
+
+
+     // Construye un panel de imagen con su etiqueta y una fila de botones personalizada.
+
+    private VBox buildImagePanel(ImageView imgView, String labelText, HBox buttonRow, boolean isLeft) {
         Label label = new Label(labelText);
         label.setStyle("-fx-text-fill: " + TEXT_SECONDARY + "; -fx-font-size: 11px; "
                      + "-fx-font-family: 'Segoe UI'; -fx-letter-spacing: 1px;");
@@ -153,8 +174,6 @@ public class MainView {
         imageContainer.getChildren().add(placeholder);
         imgView.imageProperty().addListener((obs, oldImg, newImg) -> placeholder.setVisible(newImg == null));
 
-        HBox buttonRow = new HBox(actionButton);
-        buttonRow.setAlignment(Pos.CENTER);
         buttonRow.setPadding(new Insets(10, 0, 0, 0));
 
         VBox panel = new VBox(8, label, imageContainer, buttonRow);
@@ -162,6 +181,12 @@ public class MainView {
         panel.setPadding(new Insets(0, isLeft ? 12 : 0, 0, isLeft ? 0 : 12));
         VBox.setVgrow(imageContainer, Priority.ALWAYS);
         return panel;
+    }
+
+    private HBox wrapInHBox(Button button) {
+        HBox box = new HBox(button);
+        box.setAlignment(Pos.CENTER);
+        return box;
     }
 
     private VBox buildBottomPanel() {
@@ -206,6 +231,7 @@ public class MainView {
         return row;
     }
 
+    // Construcción de botones
     private Button buildFilterTypeButton(ColorBlindType type) {
         Button btn = new Button(type.getDisplayName());
         String accent = type.getAccentColor();
@@ -257,7 +283,7 @@ public class MainView {
 
     private Button buildResetButton() {
         Button btn = new Button("↺  Restablecer");
-        btn.setPrefWidth(150);
+        btn.setPrefWidth(140);
         btn.setPrefHeight(38);
         btn.setDisable(true);
         btn.setStyle(
@@ -275,6 +301,30 @@ public class MainView {
         return btn;
     }
 
+    
+    // Construye el botón "Guardar Imagen". Comienza deshabilitado y se
+     //activa únicamente cuando hay una imagen procesada disponible.
+
+    private Button buildSaveButton() {
+        Button btn = new Button("💾  Guardar Imagen");
+        btn.setPrefWidth(155);
+        btn.setPrefHeight(38);
+        btn.setDisable(true);
+        String base  = "-fx-background-color: " + ACCENT_GREEN + "; -fx-text-fill: white; -fx-font-size: 12px; "
+                     + "-fx-font-weight: bold; -fx-font-family: 'Segoe UI'; -fx-background-radius: 6; -fx-cursor: hand;";
+        String hover = "-fx-background-color: #1E8449; -fx-text-fill: white; -fx-font-size: 12px; "
+                     + "-fx-font-weight: bold; -fx-font-family: 'Segoe UI'; -fx-background-radius: 6; -fx-cursor: hand;";
+        String disabled = "-fx-background-color: #1A3D2A; -fx-text-fill: #4A7A5A; -fx-font-size: 12px; "
+                        + "-fx-font-weight: bold; -fx-font-family: 'Segoe UI'; -fx-background-radius: 6;";
+        btn.setStyle(disabled);
+        btn.setOnMouseEntered(e -> { if (!btn.isDisabled()) btn.setStyle(hover); });
+        btn.setOnMouseExited(e  -> { if (!btn.isDisabled()) btn.setStyle(base);  });
+        btn.disabledProperty().addListener((obs, wasDisabled, isDisabled) ->
+            btn.setStyle(isDisabled ? disabled : base));
+        btn.setOnAction(e -> { if (onSaveImage != null) onSaveImage.handle(e); });
+        return btn;
+    }
+
     private ImageView createImageView() {
         ImageView iv = new ImageView();
         iv.setPreserveRatio(true);
@@ -284,20 +334,43 @@ public class MainView {
         return iv;
     }
 
+
+    // API pública — control de estado
+
+    //Muestra la imagen original en el panel izquierdo.
     public void displayOriginalImage(Image image)   { originalImageView.setImage(image); }
+
+    //Muestra la imagen procesada en el panel derecho.
     public void displayProcessedImage(Image image)  { processedImageView.setImage(image); }
+
+    //Elimina la imagen procesada del panel derecho.
     public void clearProcessedImage()               { processedImageView.setImage(null); }
+
+    //Habilita o deshabilita los botones de filtro de daltonismo.
     public void setFilterButtonsEnabled(boolean en) { for (Button b : filterButtons) b.setDisable(!en); }
+
+    //Habilita o deshabilita el botón Restablecer.
     public void setResetEnabled(boolean en)         { resetButton.setDisable(!en); }
+
+
+    //Habilita o deshabilita el botón Guardar Imagen.
+    public void setSaveEnabled(boolean en)          { saveButton.setDisable(!en); }
+
+
+     //Activa o desactiva el modo de procesamiento:muestra el indicador de progreso y bloquea controles interactivos.
 
     public void setProcessing(boolean processing) {
         progressIndicator.setVisible(processing);
         setFilterButtonsEnabled(!processing);
         loadButton.setDisable(processing);
+        if (processing) saveButton.setDisable(true);
     }
 
+
+    //Actualiza el mensaje de la barra de estado.
     public void showStatus(String message) { statusLabel.setText(message); }
 
+    // Muestra un diálogo de error modal con el mensaje indicado.
     public void showError(String message) {
         Alert alert = new Alert(Alert.AlertType.ERROR);
         alert.setTitle("Error");
@@ -306,9 +379,27 @@ public class MainView {
         alert.showAndWait();
     }
 
+
+    //Muestra un diálogo de éxito modal con el mensaje indicado.
+    public void showSuccess(String message) {
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+        alert.setTitle("Imagen guardada");
+        alert.setHeaderText(null);
+        alert.setContentText(message);
+        alert.showAndWait();
+    }
+
+
+    // Registro de callbacks
     public void setOnLoadImage(javafx.event.EventHandler<javafx.event.ActionEvent> h) { this.onLoadImage  = h; }
+
+    public void setOnSaveImage(javafx.event.EventHandler<javafx.event.ActionEvent> h) { this.onSaveImage  = h; }
+
     public void setOnApplyFilter(Consumer<ColorBlindType> h)                          { this.onApplyFilter = h; }
+
     public void setOnReset(javafx.event.EventHandler<javafx.event.ActionEvent> h)     { this.onReset       = h; }
 
+
+    //Devuelve la escena principal de la aplicación.
     public Scene getScene() { return scene; }
 }
