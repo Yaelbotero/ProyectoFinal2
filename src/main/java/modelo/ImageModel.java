@@ -4,10 +4,6 @@
  */
 package modelo;
 
-/**
- *
- * @author cript
- */
 
 import javafx.scene.image.Image;
 import javafx.scene.image.PixelReader;

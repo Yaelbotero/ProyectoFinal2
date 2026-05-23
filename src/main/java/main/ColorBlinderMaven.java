@@ -4,10 +4,7 @@
 
 package main;
 
-/**
- *
- * @author cript
- */
+
 public class ColorBlinderMaven {
 
     public static void main(String[] args) {

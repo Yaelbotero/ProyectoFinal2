@@ -4,12 +4,6 @@
  */
 package main;
 
-/**
- *
- * @author cript
- */
-
-
 import vista.MainView;
 import javafx.application.Application;
 import javafx.scene.Scene;

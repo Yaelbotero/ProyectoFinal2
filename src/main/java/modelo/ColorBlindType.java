@@ -5,18 +5,13 @@
 package modelo;
 
 /**
- *
- * @author cript
- */
-
-
-/**
  * Enumeración que representa los tres tipos de daltonismo soportados.
  * 
  * - PROTANOPIA:   Ausencia de conos sensibles al rojo (cono L)
  * - DEUTERANOPIA: Ausencia de conos sensibles al verde (cono M)
  * - TRITANOPIA:   Ausencia de conos sensibles al azul (cono S)
  */
+
 public enum ColorBlindType {
 
     PROTANOPIA(

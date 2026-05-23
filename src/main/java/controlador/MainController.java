@@ -2,15 +2,15 @@
  * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
  * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
  */
-package controlador;
-
-/**
- *
- * @author cript
+/*
+ * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
+ * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
  */
+package controlador;
 
 import modelo.ColorBlindType;
 import modelo.ImageFilter;
+import modelo.PicsumApiClient;
 import vista.MainView;
 import javafx.concurrent.Task;
 import javafx.embed.swing.SwingFXUtils;
@@ -48,6 +48,7 @@ public class MainController {
         view.setOnLoadImage(e      -> handleLoadImage());
         view.setOnApplyFilter(type -> handleApplyFilter(type));
         view.setOnSaveImage(e      -> handleSaveImage());
+        view.setOnLoadFromApi(e    -> handleLoadFromApi());
         view.setOnReset(e          -> handleReset());
     }
 
@@ -178,6 +179,47 @@ public class MainController {
         view.setResetEnabled(false);
         view.setSaveEnabled(false);
         view.showStatus("Vista restablecida. Selecciona un tipo de daltonismo para simular.");
+    }
+
+    /**
+     * Descarga una imagen aleatoria desde la API de Picsum Photos en un
+     * hilo secundario para no bloquear la interfaz gráfica.
+     * Al completarse, la imagen se carga en el modelo y se muestra en la vista.
+     */
+    private void handleLoadFromApi() {
+        view.setApiLoading(true);
+        view.showStatus("Descargando imagen desde la API de Picsum Photos...");
+
+        Task<Image> task = new Task<>() {
+            @Override
+            protected Image call() throws Exception {
+                return new PicsumApiClient().fetchRandomImage();
+            }
+        };
+
+        task.setOnSucceeded(e -> {
+            Image image = task.getValue();
+            model.setOriginalImage(image);
+            view.displayOriginalImage(image);
+            view.setFilterButtonsEnabled(true);
+            view.setResetEnabled(false);
+            view.setSaveEnabled(false);
+            view.clearProcessedImage();
+            view.setApiLoading(false);
+            view.showStatus("Imagen aleatoria cargada desde Picsum Photos API"
+                + "  (" + (int) image.getWidth() + " × " + (int) image.getHeight() + " px)");
+        });
+
+        task.setOnFailed(e -> {
+            view.setApiLoading(false);
+            view.showError("No se pudo obtener la imagen desde la API.\n"
+                + task.getException().getMessage());
+            view.showStatus("Error al conectar con la API. Verifica tu conexión a internet.");
+        });
+
+        Thread thread = new Thread(task);
+        thread.setDaemon(true);
+        thread.start();
     }
 
 
