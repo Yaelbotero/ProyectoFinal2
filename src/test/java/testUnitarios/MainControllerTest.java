@@ -2,6 +2,7 @@
  * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
  * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
  */
+
 package testUnitarios;
 
 /**
@@ -10,6 +11,7 @@ package testUnitarios;
  */
 import controlador.MainController;
 import modelo.ColorBlindType;
+import modelo.ImageFilter;
 import modelo.ImageModel;
 import vista.MainView;
 
@@ -39,7 +41,7 @@ import static org.junit.jupiter.api.Assertions.*;
 @DisplayName("Unitario — MainController")
 public class MainControllerTest {
 
-    private ImageModel model;
+    private ImageFilter model;
     private MainView   view;
     private Stage      stage;
 

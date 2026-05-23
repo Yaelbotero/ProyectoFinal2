@@ -6,13 +6,11 @@ package modelo;
 
 import javafx.scene.image.Image;
 
-
 public interface ImageFilter {
-
-
     void setOriginalImage(Image image);
-
     Image applyColorBlindFilter(ColorBlindType type);
-
     boolean hasImage();
+    Image getProcessedImage();
+    Image getOriginalImage();
+    ColorBlindType getCurrentType();
 }
