@@ -21,7 +21,7 @@ import javafx.stage.Stage;
 import java.util.function.Consumer;
 
 
- //VISTA — MainView
+// VISTA — MainView
 
 public class MainView {
 
@@ -34,6 +34,7 @@ public class MainView {
     private final Button apiButton;
     private final Button resetButton;
     private final Button saveButton;
+    private final Button historialButton;
     private final Button[] filterButtons;
 
     private javafx.event.EventHandler<javafx.event.ActionEvent> onLoadImage;
@@ -41,6 +42,7 @@ public class MainView {
     private javafx.event.EventHandler<javafx.event.ActionEvent> onLoadFromApi;
     private Consumer<ColorBlindType> onApplyFilter;
     private javafx.event.EventHandler<javafx.event.ActionEvent> onReset;
+    private javafx.event.EventHandler<javafx.event.ActionEvent> onShowHistorial;
 
     private static final String BG_DARK        = "#0F1117";
     private static final String BG_CARD        = "#1A1D27";
@@ -51,6 +53,8 @@ public class MainView {
     private static final String TEXT_SECONDARY = "#8892A4";
     private static final String BORDER_COLOR   = "#2A2D3E";
 
+
+     // Construye la vista principal, inicializa todos los componentes y conecta el controlador.
 
     public MainView(Stage stage) {
         originalImageView  = createImageView();
@@ -67,6 +71,7 @@ public class MainView {
 
         filterButtons = new Button[ColorBlindType.values().length];
 
+        historialButton = buildHistorialButton();
         loadButton  = buildLoadButton();
         apiButton   = buildApiButton();
         resetButton = buildResetButton();
@@ -81,6 +86,7 @@ public class MainView {
     }
 
     // Construcción del layout
+
     private BorderPane buildRoot() {
         BorderPane root = new BorderPane();
         root.setStyle("-fx-background-color: " + BG_DARK + ";");
@@ -138,11 +144,16 @@ public class MainView {
         return area;
     }
 
+     //Construye la fila de botones del panel izquierdo (Cargar + API).
+
     private HBox buildLeftButtonRow() {
         HBox row = new HBox(10, loadButton, apiButton);
         row.setAlignment(Pos.CENTER);
         return row;
     }
+
+
+     //Construye la fila de botones del panel derecho (Restablecer + Guardar).
 
     private HBox buildRightButtonRow() {
         HBox row = new HBox(10, resetButton, saveButton);
@@ -150,9 +161,14 @@ public class MainView {
         return row;
     }
 
+     //Construye un panel de imagen con su etiqueta y botón de acción.
+
     private VBox buildImagePanel(ImageView imgView, String labelText, Button actionButton, boolean isLeft) {
         return buildImagePanel(imgView, labelText, wrapInHBox(actionButton), isLeft);
     }
+
+
+    // Construye un panel de imagen con su etiqueta y una fila de botones personalizada.
 
     private VBox buildImagePanel(ImageView imgView, String labelText, HBox buttonRow, boolean isLeft) {
         Label label = new Label(labelText);
@@ -229,6 +245,10 @@ public class MainView {
 
             row.getChildren().add(btn);
         }
+        // Separador visual + botón historial al extremo derecho
+        row.getChildren().add(new javafx.scene.control.Separator(javafx.geometry.Orientation.VERTICAL));
+        row.getChildren().add(historialButton);
+
         return row;
     }
 
@@ -303,8 +323,12 @@ public class MainView {
         return btn;
     }
 
-     //Construye el botón "Guardar Imagen". Comienza deshabilitado y se activa únicamente cuando hay una imagen procesada disponible.
-    
+    /**
+     * Construye el botón "Guardar Imagen". Comienza deshabilitado y se
+     * activa únicamente cuando hay una imagen procesada disponible.
+     *
+     * @return botón configurado con estilos base y hover.
+     */
     private Button buildSaveButton() {
         Button btn = new Button("💾  Guardar Imagen");
         btn.setPrefWidth(155);
@@ -325,8 +349,7 @@ public class MainView {
         return btn;
     }
 
-
-    //Construye el botón "Imagen Aleatoria (API)".
+     //Construye el botón "Imagen Aleatoria (API)". Consume la API de Picsum Photos para cargar una imagen desde internet.
 
     private Button buildApiButton() {
         Button btn = new Button("🌐  Imagen Aleatoria");
@@ -343,6 +366,23 @@ public class MainView {
         return btn;
     }
 
+    //Construye el botón "Ver Historial" que abre la ventana de historial MySQL.
+
+    private Button buildHistorialButton() {
+        Button btn = new Button("📋  Ver Historial");
+        btn.setPrefWidth(145);
+        btn.setPrefHeight(38);
+        String base  = "-fx-background-color: #D4820A; -fx-text-fill: white; -fx-font-size: 12px; "
+                     + "-fx-font-weight: bold; -fx-font-family: 'Segoe UI'; -fx-background-radius: 6; -fx-cursor: hand;";
+        String hover = "-fx-background-color: #B56E08; -fx-text-fill: white; -fx-font-size: 12px; "
+                     + "-fx-font-weight: bold; -fx-font-family: 'Segoe UI'; -fx-background-radius: 6; -fx-cursor: hand;";
+        btn.setStyle(base);
+        btn.setOnMouseEntered(e -> btn.setStyle(hover));
+        btn.setOnMouseExited(e  -> btn.setStyle(base));
+        btn.setOnAction(e -> { if (onShowHistorial != null) onShowHistorial.handle(e); });
+        return btn;
+    }
+
     private ImageView createImageView() {
         ImageView iv = new ImageView();
         iv.setPreserveRatio(true);
@@ -354,26 +394,24 @@ public class MainView {
 
     // API pública — control de estado
 
-    //Muestra la imagen original en el panel izquierdo.
+    // Muestra la imagen original en el panel izquierdo.
     public void displayOriginalImage(Image image)   { originalImageView.setImage(image); }
 
-    // Muestra la imagen procesada en el panel derecho.
+    //Muestra la imagen procesada en el panel derecho.
     public void displayProcessedImage(Image image)  { processedImageView.setImage(image); }
 
-    //Elimina la imagen procesada del panel derecho.
+    // Elimina la imagen procesada del panel derecho. 
     public void clearProcessedImage()               { processedImageView.setImage(null); }
 
     //Habilita o deshabilita los botones de filtro de daltonismo.
     public void setFilterButtonsEnabled(boolean en) { for (Button b : filterButtons) b.setDisable(!en); }
 
-    // Habilita o deshabilita el botón Restablecer.
+    //Habilita o deshabilita el botón Restablecer. 
     public void setResetEnabled(boolean en)         { resetButton.setDisable(!en); }
 
+     //Habilita o deshabilita el botón Guardar Imagen.
 
-    // Habilita o deshabilita el botón Guardar Imagen.
-  
     public void setSaveEnabled(boolean en)          { saveButton.setDisable(!en); }
-
 
     public void setProcessing(boolean processing) {
         progressIndicator.setVisible(processing);
@@ -382,7 +420,6 @@ public class MainView {
         if (processing) saveButton.setDisable(true);
     }
 
-    //Actualiza el mensaje de la barra de estado.
     public void showStatus(String message) { statusLabel.setText(message); }
 
     public void showError(String message) {
@@ -409,22 +446,25 @@ public class MainView {
         progressIndicator.setVisible(loading);
     }
 
-    // Registra el manejador para el evento "Cargar Imagen".
+    // Registra el manejador para el evento "Cargar Imagen". 
     public void setOnLoadImage(javafx.event.EventHandler<javafx.event.ActionEvent> h) { this.onLoadImage  = h; }
 
-    // Registra el manejador para el evento "Guardar Imagen". 
+    // Registra el manejador para el evento "Guardar Imagen".
     public void setOnSaveImage(javafx.event.EventHandler<javafx.event.ActionEvent> h) { this.onSaveImage  = h; }
 
-    //Registra el manejador para el evento "Imagen Aleatoria (API)".
+    //Registra el manejador para el evento "Imagen Aleatoria (API)". 
     public void setOnLoadFromApi(javafx.event.EventHandler<javafx.event.ActionEvent> h) { this.onLoadFromApi = h; }
 
-    //Registra el manejador para los botones de filtro de daltonismo.
-    public void setOnApplyFilter(Consumer<ColorBlindType> h)                          { this.onApplyFilter = h; }
+    //Registra el manejador para los botones de filtro de daltonismo. 
+    public void setOnApplyFilter(Consumer<ColorBlindType> h)                        { this.onApplyFilter = h; }
 
-    // Registra el manejador para el evento "Restablecer".
+    // Registra el manejador para el evento "Restablecer". 
     public void setOnReset(javafx.event.EventHandler<javafx.event.ActionEvent> h)     { this.onReset       = h; }
 
+    // Registra el manejador para el evento "Ver Historial". 
+    public void setOnShowHistorial(javafx.event.EventHandler<javafx.event.ActionEvent> h) { this.onShowHistorial = h; }
 
-    // Devuelve la escena principal de la aplicación.
+    
+    //Devuelve la escena principal de la aplicación.
     public Scene getScene() { return scene; }
 }
