@@ -2,6 +2,7 @@
  * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
  * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
  */
+
 package controlador;
 
 import modelo.ColorBlindType;
@@ -31,6 +32,7 @@ public class MainController {
     private final Stage                stage;
     private final SimulacionRepository repository = new SimulacionRepository();
     private String currentImageName = "desconocido";
+    private String currentImagePath = "";
 
 
     // Construye el controlador y enlaza los eventos de la vista.
@@ -75,8 +77,8 @@ public class MainController {
                 }
 
                 model.setOriginalImage(image);
-            currentImageName = "Picsum_API_" + (int)image.getWidth() + "x" + (int)image.getHeight();
                 currentImageName = selectedFile.getName();
+                currentImagePath = selectedFile.getAbsolutePath();
                 view.displayOriginalImage(image);
                 view.setFilterButtonsEnabled(true);
                 view.setResetEnabled(false);
@@ -118,7 +120,8 @@ public class MainController {
                 type.getDisplayName(),
                 nombreFuente,
                 (int) task.getValue().getWidth(),
-                (int) task.getValue().getHeight()
+                (int) task.getValue().getHeight(),
+                currentImagePath
             );
             view.showStatus("Simulación aplicada: " + type.getDisplayName()
                 + " — Así ve esta imagen una persona con este tipo de daltonismo.");
@@ -210,6 +213,7 @@ public class MainController {
             Image image = task.getValue();
             model.setOriginalImage(image);
             currentImageName = "Picsum_API_" + (int)image.getWidth() + "x" + (int)image.getHeight();
+            currentImagePath = "";
             view.displayOriginalImage(image);
             view.setFilterButtonsEnabled(true);
             view.setResetEnabled(false);
@@ -231,26 +235,24 @@ public class MainController {
         thread.setDaemon(true);
         thread.start();
     }
-
-
-    /**
-     * Abre una ventana modal con el historial de simulaciones almacenado en MySQL.
-     * Muestra fecha, tipo de daltonismo, nombre de imagen y dimensiones.
-     */
+ 
+    //Aquí se aplica la base de datos en MySQl
+    
     private void handleShowHistorial() {
         java.util.List<String[]> historial = repository.obtenerHistorial();
 
         javafx.stage.Stage dialog = new javafx.stage.Stage();
         dialog.initModality(javafx.stage.Modality.APPLICATION_MODAL);
         dialog.setTitle("Historial de Simulaciones — MySQL");
-        dialog.setMinWidth(680);
-        dialog.setMinHeight(420);
+        dialog.setMinWidth(740);
+        dialog.setMinHeight(440);
 
         javafx.scene.control.TableView<String[]> table = new javafx.scene.control.TableView<>();
         table.setStyle("-fx-background-color: #1A1D27; -fx-text-fill: #E8EAF0;");
+        table.setPlaceholder(new javafx.scene.control.Label("No hay simulaciones registradas aún."));
 
         String[] columns = { "ID", "Fecha", "Tipo Daltonismo", "Imagen", "Ancho", "Alto" };
-        int[] widths     = { 45,   145,    160,               160,      65,     65  };
+        int[]    widths   = {  45,    145,    160,               175,      65,     65  };
 
         for (int i = 0; i < columns.length; i++) {
             final int idx = i;
@@ -264,8 +266,63 @@ public class MainController {
 
         table.getItems().addAll(historial);
 
+        // ── Doble clic: cargar imagen desde ruta almacenada ──
+        table.setRowFactory(tv -> {
+            javafx.scene.control.TableRow<String[]> row = new javafx.scene.control.TableRow<>();
+            row.setOnMouseClicked(event -> {
+                if (event.getClickCount() == 2 && !row.isEmpty()) {
+                    String[] registro = row.getItem();
+                    String ruta = registro[6]; // índice 6 = ruta_archivo
+
+                    if (ruta == null || ruta.isEmpty()) {
+                        view.showError("Esta imagen proviene de la API y no tiene"
+                            + "ruta local disponible para recargarla.");
+                        return;
+                    }
+
+                    java.io.File archivo = new java.io.File(ruta);
+                    if (!archivo.exists()) {
+                        view.showError("El archivo ya no existe en la ruta:" + ruta);
+                        return;
+                    }
+
+                    try {
+                        javafx.scene.image.Image image =
+                            new javafx.scene.image.Image(archivo.toURI().toString());
+
+                        if (image.isError()) {
+                            view.showError("No se pudo cargar la imagen desde:" + ruta);
+                            return;
+                        }
+
+                        model.setOriginalImage(image);
+                        currentImageName = archivo.getName();
+                        currentImagePath = ruta;
+
+                        view.displayOriginalImage(image);
+                        view.setFilterButtonsEnabled(true);
+                        view.setResetEnabled(false);
+                        view.setSaveEnabled(false);
+                        view.clearProcessedImage();
+                        view.showStatus("Imagen recargada desde historial: " + archivo.getName()
+                            + "  (" + (int)image.getWidth() + " × " + (int)image.getHeight() + " px)");
+
+                        dialog.close();
+
+                    } catch (Exception ex) {
+                        view.showError("Error al cargar la imagen:" + ex.getMessage());
+                    }
+                }
+            });
+            return row;
+        });
+
+        javafx.scene.control.Label hintLabel = new javafx.scene.control.Label(
+            "💡 Doble clic en una fila para recargar la imagen original");
+        hintLabel.setStyle("-fx-text-fill: #4F8EF7; -fx-font-size: 11px; -fx-font-family: 'Segoe UI';");
+
         javafx.scene.control.Label totalLabel = new javafx.scene.control.Label(
-            "Total de simulaciones registradas: " + repository.contarSimulaciones());
+            "Total registradas: " + repository.contarSimulaciones());
         totalLabel.setStyle("-fx-text-fill: #8892A4; -fx-font-size: 11px; -fx-font-family: 'Segoe UI';");
 
         javafx.scene.control.Button btnLimpiar = new javafx.scene.control.Button("🗑  Limpiar historial");
@@ -274,7 +331,7 @@ public class MainController {
         btnLimpiar.setOnAction(e -> {
             if (repository.limpiarHistorial()) {
                 table.getItems().clear();
-                totalLabel.setText("Total de simulaciones registradas: 0");
+                totalLabel.setText("Total registradas: 0");
             }
         });
 
@@ -283,18 +340,18 @@ public class MainController {
             + "-fx-font-size: 11px; -fx-font-family: 'Segoe UI'; -fx-background-radius: 5; -fx-cursor: hand;");
         btnCerrar.setOnAction(e -> dialog.close());
 
-        javafx.scene.layout.HBox buttonRow = new javafx.scene.layout.HBox(10, btnLimpiar, btnCerrar);
-        buttonRow.setAlignment(javafx.geometry.Pos.CENTER_RIGHT);
-        buttonRow.setPadding(new javafx.geometry.Insets(10, 16, 10, 16));
+        javafx.scene.layout.HBox bottomRow = new javafx.scene.layout.HBox(10);
+        bottomRow.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
+        bottomRow.setPadding(new javafx.geometry.Insets(10, 16, 10, 16));
+        javafx.scene.layout.HBox spacer = new javafx.scene.layout.HBox();
+        javafx.scene.layout.HBox.setHgrow(spacer, javafx.scene.layout.Priority.ALWAYS);
+        bottomRow.getChildren().addAll(hintLabel, spacer, totalLabel, btnLimpiar, btnCerrar);
 
-        javafx.scene.layout.HBox statusRow = new javafx.scene.layout.HBox(totalLabel);
-        statusRow.setPadding(new javafx.geometry.Insets(8, 16, 0, 16));
-
-        javafx.scene.layout.VBox root = new javafx.scene.layout.VBox(0, table, statusRow, buttonRow);
+        javafx.scene.layout.VBox root = new javafx.scene.layout.VBox(0, table, bottomRow);
         javafx.scene.layout.VBox.setVgrow(table, javafx.scene.layout.Priority.ALWAYS);
         root.setStyle("-fx-background-color: #0F1117;");
 
-        dialog.setScene(new javafx.scene.Scene(root, 680, 420));
+        dialog.setScene(new javafx.scene.Scene(root, 740, 440));
         dialog.show();
     }
 
