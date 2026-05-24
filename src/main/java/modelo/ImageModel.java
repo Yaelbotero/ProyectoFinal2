@@ -4,165 +4,47 @@
  */
 package modelo;
 
-
 import javafx.scene.image.Image;
-import javafx.scene.image.PixelReader;
-import javafx.scene.image.PixelWriter;
-import javafx.scene.image.WritableImage;
-import javafx.scene.paint.Color;
 
-public class ImageModel implements ImageFilter {
 
-    private Image originalImage;
-    private Image processedImage;
-    private ColorBlindType currentType;
+ //MODELO — ImageModel
 
-    // Matrices de conversión RGB ↔ LMS adaptado al iluminante D65
-    private static final double[][] RGB_TO_LMS = {
-        { 0.31399022, 0.63951294, 0.04649755 },
-        { 0.15537241, 0.75789446, 0.08670142 },
-        { 0.01775239, 0.10944209, 0.87256922 }
-    };
 
-    private static final double[][] LMS_TO_RGB = {
-        {  5.47221206, -4.64196010,  0.16963708 },
-        { -1.12524190,  2.29317094, -0.16789520 },
-        {  0.02980165, -0.19318073,  1.16364789 }
-    };
+public class ImageModel extends BaseFilter {
 
     // Matrices de simulación de daltonismo en espacio LMS
+
+    // Matriz LMS para simular Protanopía (ausencia de cono L — rojo).
     private static final double[][] PROTANOPIA_LMS = {
         { 0.00000000, 2.02344354, -2.52580820 },
         { 0.00000000, 1.00000000,  0.00000000 },
         { 0.00000000, 0.00000000,  1.00000000 }
     };
 
+    // Matriz LMS para simular Deuteranopía (ausencia de cono M — verde).
     private static final double[][] DEUTERANOPIA_LMS = {
         { 1.00000000, 0.00000000,  0.00000000 },
         { 0.49420696, 0.00000000,  1.24827352 },
         { 0.00000000, 0.00000000,  1.00000000 }
     };
 
+    // Matriz LMS para simular Tritanopía (ausencia de cono S — azul). 
     private static final double[][] TRITANOPIA_LMS = {
         { 1.00000000, 0.00000000,  0.00000000 },
         { 0.00000000, 1.00000000,  0.00000000 },
         {-0.86744736, 1.86727022,  0.00000000 }
     };
 
-
-    public Image getOriginalImage() { return originalImage; }
-
-
-    public Image getProcessedImage() { return processedImage; }
-
-
-    public ColorBlindType getCurrentType() { return currentType; }
-
-
-    @Override
-    public void setOriginalImage(Image image) {
-        this.originalImage  = image;
-        this.processedImage = null;
-    }
-
-
-    @Override
-    public boolean hasImage() {
-        return originalImage != null;
-    }
-
-
-    @Override
-    public Image applyColorBlindFilter(ColorBlindType type) {
-        if (originalImage == null) return null;
-
-        this.currentType = type;
-        double[][] simulationMatrix = getSimulationMatrix(type);
-
-        int width  = (int) originalImage.getWidth();
-        int height = (int) originalImage.getHeight();
-
-        WritableImage result = new WritableImage(width, height);
-        PixelReader   reader = originalImage.getPixelReader();
-        PixelWriter   writer = result.getPixelWriter();
-
-        for (int y = 0; y < height; y++) {
-            for (int x = 0; x < width; x++) {
-                Color original    = reader.getColor(x, y);
-                Color transformed = transformColor(original, simulationMatrix);
-                writer.setColor(x, y, transformed);
-            }
-        }
-
-        this.processedImage = result;
-        return result;
-    }
-
-  
-     //Aplica el filtro usando el nombre del tipo de daltonismo como cadena de texto.
+    // Métodos públicos
 
     public Image applyColorBlindFilter(String typeName) {
         return applyColorBlindFilter(ColorBlindType.valueOf(typeName.toUpperCase()));
     }
-    
 
-    // Métodos privados de transformación de color
+    // Implementación del método abstracto
 
-    
-    private Color transformColor(Color color, double[][] simMatrix) {
-        double r = linearize(color.getRed());
-        double g = linearize(color.getGreen());
-        double b = linearize(color.getBlue());
-
-        double[] lms          = multiplyMatrix(RGB_TO_LMS, new double[]{ r, g, b });
-        double[] lmsSimulated = multiplyMatrix(simMatrix, lms);
-        double[] rgbLinear    = multiplyMatrix(LMS_TO_RGB, lmsSimulated);
-
-        return new Color(
-            clamp(gammaCorrect(rgbLinear[0])),
-            clamp(gammaCorrect(rgbLinear[1])),
-            clamp(gammaCorrect(rgbLinear[2])),
-            color.getOpacity()
-        );
-    }
-
-    private double[] multiplyMatrix(double[][] matrix, double[] vector) {
-        double[] result = new double[3];
-        for (int i = 0; i < 3; i++) {
-            result[i] = matrix[i][0] * vector[0]
-                      + matrix[i][1] * vector[1]
-                      + matrix[i][2] * vector[2];
-        }
-        return result;
-    }
-
-
-     //Convierte un valor sRGB comprimido a valor lineal (elimina gamma).
-
-    private double linearize(double value) {
-        return (value <= 0.04045)
-            ? value / 12.92
-            : Math.pow((value + 0.055) / 1.055, 2.4);
-    }
-
-
-    //Aplica corrección gamma para convertir un valor lineal a sRGB.
-
-    private double gammaCorrect(double value) {
-        value = clamp(value);
-        return (value <= 0.0031308)
-            ? value * 12.92
-            : 1.055 * Math.pow(value, 1.0 / 2.4) - 0.055;
-    }
-
-    private double clamp(double value) {
-        return Math.max(0.0, Math.min(1.0, value));
-    }
-
-
-    // Devuelve la matriz de simulación LMS correspondiente al tipo de daltonismo.
-
-    private double[][] getSimulationMatrix(ColorBlindType type) {
+    @Override
+    protected double[][] getSimulationMatrix(ColorBlindType type) {
         switch (type) {
             case PROTANOPIA:   return PROTANOPIA_LMS;
             case DEUTERANOPIA: return DEUTERANOPIA_LMS;
