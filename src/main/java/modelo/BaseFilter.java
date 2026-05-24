@@ -10,8 +10,7 @@ import javafx.scene.image.PixelWriter;
 import javafx.scene.image.WritableImage;
 import javafx.scene.paint.Color;
 
-
-//MODELO ABSTRACTO — BaseFilter
+ //MODELO ABSTRACTO — BaseFilter
 
 public abstract class BaseFilter implements ImageFilter {
 
@@ -21,18 +20,22 @@ public abstract class BaseFilter implements ImageFilter {
 
     protected ColorBlindType currentType;
 
-    // Matrices de conversión RGB ↔ LMS (iluminante D65)
-
-    private static final double[][] RGB_TO_LMS = {
-        { 0.31399022, 0.63951294, 0.04649755 },
-        { 0.15537241, 0.75789446, 0.08670142 },
-        { 0.01775239, 0.10944209, 0.87256922 }
+    static final double[][] PROTANOPIA_RGB = {
+        { 0.152286,  1.052583, -0.204868 },
+        { 0.114503,  0.786281,  0.099216 },
+        {-0.003882, -0.048116,  1.051998 }
     };
 
-    private static final double[][] LMS_TO_RGB = {
-        {  5.47221206, -4.64196010,  0.16963708 },
-        { -1.12524190,  2.29317094, -0.16789520 },
-        {  0.02980165, -0.19318073,  1.16364789 }
+    static final double[][] DEUTERANOPIA_RGB = {
+        { 0.367322,  0.860646, -0.227968 },
+        { 0.280085,  0.672501,  0.047413 },
+        {-0.011820,  0.042940,  0.968881 }
+    };
+
+    static final double[][] TRITANOPIA_RGB = {
+        { 1.255528, -0.076749, -0.178779 },
+        {-0.078411,  0.930809,  0.147602 },
+        { 0.004733,  0.691367,  0.303900 }
     };
 
     // Implementaciones de ImageFilter (comunes a todas las subclases)
@@ -62,7 +65,7 @@ public abstract class BaseFilter implements ImageFilter {
         if (originalImage == null) return null;
 
         this.currentType = type;
-        double[][] simulationMatrix = getSimulationMatrix(type);
+        double[][] simMatrix = getSimulationMatrix(type);
 
         int width  = (int) originalImage.getWidth();
         int height = (int) originalImage.getHeight();
@@ -74,7 +77,7 @@ public abstract class BaseFilter implements ImageFilter {
         for (int y = 0; y < height; y++) {
             for (int x = 0; x < width; x++) {
                 Color original    = reader.getColor(x, y);
-                Color transformed = transformColor(original, simulationMatrix);
+                Color transformed = transformColor(original, simMatrix);
                 writer.setColor(x, y, transformed);
             }
         }
@@ -84,30 +87,29 @@ public abstract class BaseFilter implements ImageFilter {
     }
 
     // Método abstracto — contrato para subclases
+
+     //Devuelve la matriz de simulación RGB correspondiente al tipo de daltonismo.
+
     protected abstract double[][] getSimulationMatrix(ColorBlindType type);
 
-
-    // Métodos de transformación de color (reutilizables por subclases)
+    // Métodos de transformación (reutilizables por subclases)
     
+     //Transforma un píxel aplicando la matriz de simulación sobre RGB lineal.
+
     protected Color transformColor(Color color, double[][] simMatrix) {
         double r = linearize(color.getRed());
         double g = linearize(color.getGreen());
         double b = linearize(color.getBlue());
 
-        double[] lms          = multiplyMatrix(RGB_TO_LMS, new double[]{ r, g, b });
-        double[] lmsSimulated = multiplyMatrix(simMatrix, lms);
-        double[] rgbLinear    = multiplyMatrix(LMS_TO_RGB, lmsSimulated);
+        double[] rgb = multiplyMatrix(simMatrix, new double[]{ r, g, b });
 
         return new Color(
-            clamp(gammaCorrect(rgbLinear[0])),
-            clamp(gammaCorrect(rgbLinear[1])),
-            clamp(gammaCorrect(rgbLinear[2])),
+            clamp(gammaCorrect(rgb[0])),
+            clamp(gammaCorrect(rgb[1])),
+            clamp(gammaCorrect(rgb[2])),
             color.getOpacity()
         );
     }
-
-
-     //Multiplica una matriz 3×3 por un vector de 3 elementos.
 
     protected double[] multiplyMatrix(double[][] matrix, double[] vector) {
         double[] result = new double[3];
@@ -118,6 +120,8 @@ public abstract class BaseFilter implements ImageFilter {
         }
         return result;
     }
+    
+     //Convierte un valor sRGB comprimido a valor lineal (elimina gamma).
 
     protected double linearize(double value) {
         return (value <= 0.04045)
@@ -125,6 +129,8 @@ public abstract class BaseFilter implements ImageFilter {
             : Math.pow((value + 0.055) / 1.055, 2.4);
     }
 
+    // Aplica corrección gamma para convertir un valor lineal a sRGB.
+    
     protected double gammaCorrect(double value) {
         value = clamp(value);
         return (value <= 0.0031308)

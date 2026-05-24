@@ -228,18 +228,24 @@ public class ImageModelTest {
     }
 
     @Test @Order(18)
-    @DisplayName("18. applyColorBlindFilter: Protanopía ≠ Deuteranopía para misma imagen")
+    @DisplayName("18. applyColorBlindFilter: Protanopía ≠ Deuteranopía para imagen con rojo puro")
     void testProtanopiaDiferenteDeuteranopia() {
-        model.setOriginalImage(imagenGradiente(20, 20));
+        // Rojo puro maximiza la diferencia entre Protanopía y Deuteranopía
+        WritableImage img = new WritableImage(4, 4);
+        for (int y = 0; y < 4; y++)
+            for (int x = 0; x < 4; x++)
+                img.getPixelWriter().setColor(x, y, Color.RED);
+
+        model.setOriginalImage(img);
         Image proto = model.applyColorBlindFilter(ColorBlindType.PROTANOPIA);
 
-        model.setOriginalImage(imagenGradiente(20, 20));
+        model.setOriginalImage(img);
         Image deutera = model.applyColorBlindFilter(ColorBlindType.DEUTERANOPIA);
 
-        Color cp = proto.getPixelReader().getColor(10, 10);
-        Color cd = deutera.getPixelReader().getColor(10, 10);
-        assertFalse(colorCercano(cp, cd, 0.01),
-            "Protanopía y Deuteranopía deben producir resultados distintos");
+        Color cp = proto.getPixelReader().getColor(2, 2);
+        Color cd = deutera.getPixelReader().getColor(2, 2);
+        assertFalse(colorCercano(cp, cd, 0.02),
+            "Protanopía y Deuteranopía deben producir resultados distintos sobre rojo puro");
     }
 
     @Test @Order(19)
@@ -352,5 +358,97 @@ public class ImageModelTest {
         return Math.abs(a.getRed()   - b.getRed())   <= tol
             && Math.abs(a.getGreen() - b.getGreen()) <= tol
             && Math.abs(a.getBlue()  - b.getBlue())  <= tol;
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // MATRICES MACHADO 2009 — comportamiento específico
+    // ═══════════════════════════════════════════════════════════════════════
+
+    @Test @Order(25)
+    @DisplayName("25. Protanopía: el rojo puro se oscurece notablemente (característica Machado)")
+    void testProtanopiaOscureceRojo() {
+        WritableImage img = new WritableImage(4, 4);
+        for (int y = 0; y < 4; y++)
+            for (int x = 0; x < 4; x++)
+                img.getPixelWriter().setColor(x, y, Color.RED);
+
+        model.setOriginalImage(img);
+        Image result = model.applyColorBlindFilter(ColorBlindType.PROTANOPIA);
+        Color out = result.getPixelReader().getColor(2, 2);
+
+        // Con Machado, el rojo puro en Protanopía produce luminosidad baja
+        double luminancia = 0.2126 * out.getRed() + 0.7152 * out.getGreen() + 0.0722 * out.getBlue();
+        assertTrue(luminancia < 0.4,
+            "Protanopía debe oscurecer el rojo puro — luminancia obtenida: " + luminancia);
+    }
+
+    @Test @Order(26)
+    @DisplayName("26. Tritanopía: el azul puro se transforma significativamente (característica Machado)")
+    void testTritanopiaTransformaAzul() {
+        WritableImage img = new WritableImage(4, 4);
+        for (int y = 0; y < 4; y++)
+            for (int x = 0; x < 4; x++)
+                img.getPixelWriter().setColor(x, y, Color.BLUE);
+
+        model.setOriginalImage(img);
+        Image result = model.applyColorBlindFilter(ColorBlindType.TRITANOPIA);
+        Color out = result.getPixelReader().getColor(2, 2);
+
+        assertFalse(colorCercano(out, Color.BLUE, 0.05),
+            "Tritanopía debe transformar el azul puro significativamente");
+    }
+
+    @Test @Order(27)
+    @DisplayName("27. applyColorBlindFilter(String): sobrecarga acepta nombre en minúsculas")
+    void testSobrecargaStringMinusculas() {
+        model.setOriginalImage(imagen(10, 10));
+        assertDoesNotThrow(() -> model.applyColorBlindFilter("protanopia"),
+            "La sobrecarga String debe aceptar minúsculas y convertirlas internamente");
+        assertEquals(ColorBlindType.PROTANOPIA, model.getCurrentType());
+    }
+
+    @Test @Order(28)
+    @DisplayName("28. applyColorBlindFilter(String): nombre inválido lanza IllegalArgumentException")
+    void testSobrecargaStringInvalida() {
+        model.setOriginalImage(imagen(10, 10));
+        assertThrows(IllegalArgumentException.class,
+            () -> model.applyColorBlindFilter("DALTONISMO"),
+            "Nombre de tipo inválido debe lanzar IllegalArgumentException");
+    }
+
+    @Test @Order(29)
+    @DisplayName("29. Los tres filtros producen resultados distintos entre sí")
+    void testTresFiltrosDistintos() {
+        // Rojo puro: maximiza diferencia entre Protanopía y Deuteranopía
+        WritableImage imgRoja = new WritableImage(4, 4);
+        for (int y = 0; y < 4; y++)
+            for (int x = 0; x < 4; x++)
+                imgRoja.getPixelWriter().setColor(x, y, Color.RED);
+
+        model.setOriginalImage(imgRoja);
+        Image proto = model.applyColorBlindFilter(ColorBlindType.PROTANOPIA);
+
+        model.setOriginalImage(imgRoja);
+        Image deutera = model.applyColorBlindFilter(ColorBlindType.DEUTERANOPIA);
+
+        // Azul puro: maximiza diferencia con Tritanopía
+        WritableImage imgAzul = new WritableImage(4, 4);
+        for (int y = 0; y < 4; y++)
+            for (int x = 0; x < 4; x++)
+                imgAzul.getPixelWriter().setColor(x, y, Color.BLUE);
+
+        model.setOriginalImage(imgAzul);
+        Image trita = model.applyColorBlindFilter(ColorBlindType.TRITANOPIA);
+
+        model.setOriginalImage(imgAzul);
+        Image deuteraAzul = model.applyColorBlindFilter(ColorBlindType.DEUTERANOPIA);
+
+        Color cp  = proto.getPixelReader().getColor(2, 2);
+        Color cd  = deutera.getPixelReader().getColor(2, 2);
+        Color ct  = trita.getPixelReader().getColor(2, 2);
+        Color cdA = deuteraAzul.getPixelReader().getColor(2, 2);
+
+        assertFalse(colorCercano(cp, cd,  0.02), "Protanopía ≠ Deuteranopía sobre rojo");
+        assertFalse(colorCercano(ct, cdA, 0.02), "Tritanopía ≠ Deuteranopía sobre azul");
     }
 }
