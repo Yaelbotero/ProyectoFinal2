@@ -7,9 +7,7 @@ package main;
 
 public class Launcher {
     public static void main(String[] args) {
-        // Estas líneas opcionales para la renderización por software (sw) 
-        // puedes mantenerlas si tienes problemas de tarjeta gráfica, 
-        // pero la ruta del SDK ya no es necesaria.
+
         System.setProperty("prism.order", "sw");
         System.setProperty("prism.verbose", "true");
         
