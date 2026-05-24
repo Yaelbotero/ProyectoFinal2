@@ -8,31 +8,11 @@ import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * MODELO — SimulacionRepository
- *
- * <p>Repositorio que gestiona las operaciones de persistencia sobre la tabla
- * {@code historial_simulaciones} en MySQL.
- *
- * <p>Cada registro almacena el tipo de daltonismo aplicado, el nombre e imagen
- * del archivo, sus dimensiones y la ruta completa en disco para poder
- * recargarla desde el historial.
- *
- * @author cript
- */
+
+ //MODELO — SimulacionRepository
+
 public class SimulacionRepository {
 
-    /**
-     * Inserta un nuevo registro en el historial de simulaciones.
-     *
-     * @param tipoDaltonismo nombre del tipo aplicado (p. ej. {@code "Protanopía"}).
-     * @param nombreImagen   nombre corto del archivo (p. ej. {@code "foto.png"}).
-     * @param anchoPx        ancho de la imagen en píxeles.
-     * @param altoPx         alto de la imagen en píxeles.
-     * @param rutaArchivo    ruta absoluta del archivo en disco, o cadena vacía si
-     *                       la imagen proviene de la API.
-     * @return {@code true} si el registro se insertó correctamente.
-     */
     public boolean guardarSimulacion(String tipoDaltonismo, String nombreImagen,
                                      int anchoPx, int altoPx, String rutaArchivo) {
         String sql = "INSERT INTO historial_simulaciones "
@@ -55,13 +35,6 @@ public class SimulacionRepository {
         }
     }
 
-    /**
-     * Recupera todos los registros del historial ordenados por fecha descendente.
-     *
-     * @return lista de arreglos {@code String[]} con los campos
-     *         [id, fecha, tipo_daltonismo, nombre_imagen, ancho_px, alto_px, ruta_archivo],
-     *         o lista vacía si no hay registros o hay error.
-     */
     public List<String[]> obtenerHistorial() {
         List<String[]> historial = new ArrayList<>();
         String sql = "SELECT id, fecha, tipo_daltonismo, nombre_imagen, "
@@ -90,11 +63,6 @@ public class SimulacionRepository {
         return historial;
     }
 
-    /**
-     * Elimina todos los registros del historial de simulaciones.
-     *
-     * @return {@code true} si se limpió correctamente.
-     */
     public boolean limpiarHistorial() {
         String sql = "DELETE FROM historial_simulaciones";
         try (Connection conn = DatabaseConnection.getConnection();
@@ -109,11 +77,6 @@ public class SimulacionRepository {
         }
     }
 
-    /**
-     * Cuenta el total de simulaciones registradas en el historial.
-     *
-     * @return número de registros, o {@code -1} si hay error.
-     */
     public int contarSimulaciones() {
         String sql = "SELECT COUNT(*) FROM historial_simulaciones";
         try (Connection conn = DatabaseConnection.getConnection();
