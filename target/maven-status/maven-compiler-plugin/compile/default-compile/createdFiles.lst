@@ -1,0 +1,15 @@
+vista\MainView.class
+main\Launcher.class
+controlador\MainController$2.class
+modelo\SimulacionRepository.class
+main\ColorBlinderMaven.class
+main\MainApp.class
+modelo\PicsumApiClient.class
+modelo\ColorBlindType.class
+modelo\ImageFilter.class
+modelo\ImageModel.class
+modelo\BaseFilter.class
+modelo\DatabaseConnection.class
+controlador\MainController.class
+modelo\ImageModel$1.class
+controlador\MainController$1.class
