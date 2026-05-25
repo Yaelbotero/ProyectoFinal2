@@ -4,7 +4,7 @@
  */
 package main;
 
-
+//Este es el main principal que ejecuta el programa
 public class Launcher {
     public static void main(String[] args) {
 
