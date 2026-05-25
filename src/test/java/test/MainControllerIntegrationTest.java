@@ -377,25 +377,31 @@ void testFilterOutputIsValid() throws InterruptedException {
     @Order(15)
     @DisplayName("15. Integración: aplicar dos filtros distintos produce resultados diferentes")
     void testTwoFiltersProduceDifferentResults() throws InterruptedException {
-        Image original = createSyntheticImage(30, 30);
-        runOnFxThread(() -> model.setOriginalImage(original));
+        // Rojo puro: maximiza la diferencia entre Protanopía y Deuteranopía con matrices Machado
+        WritableImage redImage = new WritableImage(10, 10);
+        for (int y = 0; y < 10; y++)
+            for (int x = 0; x < 10; x++)
+                redImage.getPixelWriter().setColor(x, y, Color.RED);
 
-        AtomicReference<Image> proto    = new AtomicReference<>();
-        AtomicReference<Image> deutera  = new AtomicReference<>();
+        runOnFxThread(() -> model.setOriginalImage(redImage));
+
+        AtomicReference<Image> proto   = new AtomicReference<>();
+        AtomicReference<Image> deutera = new AtomicReference<>();
 
         runOnFxThread(() -> proto.set(model.applyColorBlindFilter(ColorBlindType.PROTANOPIA)));
+
+        runOnFxThread(() -> model.setOriginalImage(redImage));
         runOnFxThread(() -> deutera.set(model.applyColorBlindFilter(ColorBlindType.DEUTERANOPIA)));
 
         assertNotNull(proto.get());
         assertNotNull(deutera.get());
 
-        // Comparar un píxel central 
-        Color pColor = proto.get().getPixelReader().getColor(15, 15);
-        Color dColor = deutera.get().getPixelReader().getColor(15, 15);
+        Color pColor = proto.get().getPixelReader().getColor(5, 5);
+        Color dColor = deutera.get().getPixelReader().getColor(5, 5);
 
         assertFalse(
-            isApproximatelyEqual(pColor, dColor, 0.01),
-            "Protanopía y Deuteranopía deben producir resultados distintos para la misma imagen"
+            isApproximatelyEqual(pColor, dColor, 0.02),
+            "Protanopía y Deuteranopía deben producir resultados distintos sobre rojo puro"
         );
     }
 
