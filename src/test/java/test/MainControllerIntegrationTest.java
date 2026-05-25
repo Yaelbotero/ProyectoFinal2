@@ -4,6 +4,8 @@
  */
 package test;
 
+//paquete principal de los test con correción implementada
+
 import controlador.MainController;
 import modelo.ColorBlindType;
 import modelo.ImageModel;
