@@ -13,6 +13,8 @@ import javafx.stage.Stage;
  * Punto de entrada principal de la aplicación ColorBlind Helper.
  * Inicializa JavaFX y lanza la ventana principal.
  */
+
+//En este main es donde se configuran los valores de la interfaz de la app
 public class MainApp extends Application {
 
     @Override
